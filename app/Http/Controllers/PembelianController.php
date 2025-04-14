@@ -99,6 +99,11 @@ class PembelianController extends Controller
     // Total uang dibayar dari input
     $totalDibayar = $request->total_payment;
 
+    // Validasi: Jangan izinkan pembayaran kurang dari total harga
+    if ($totalDibayar < $totalHargaBarang) {
+        return back()->withInput()->with('error', 'Jumlah pembayaran kurang dari total harga.');
+    }
+
     // Hitung uang kembalian
     $uangKembalian = max(0, $totalDibayar - $totalHargaBarang);
 
@@ -137,59 +142,46 @@ public function storeStep2(Request $request)
         'point_used'    => 'nullable|in:1',
     ]);
 
-    // Cari atau buat member baru
-    $member = Member::where('nama_member', $request->nama_member)->first();
-
-    if (!$member) {
-        $member = Member::create([
-            'nama_member'    => $request->nama_member,
-            'nomor_telepon'  => $request->customer_phone ?? '-',
-            'points'         => 0,
-        ]);
-    }
+    // Cari atau buat member
+    $member = Member::firstOrCreate(
+        ['nama_member' => $request->nama_member],
+        [
+            'nomor_telepon' => $request->customer_phone ?? '-',
+            'points'        => 0,
+        ]
+    );
 
     // Hitung total belanja dari session
-    $totalBelanja = 0;
-    if (session()->has('selected_products')) {
-        foreach (session('selected_products') as $item) {
-            $totalBelanja += $item['sub_total'];
-        }
-    }
+    $selectedProducts = session('selected_products', []);
+    $totalBelanja = collect($selectedProducts)->sum('sub_total');
 
-    $pointUsed = 0;
-    $potongan = 0;
-    $totalPayment = $totalBelanja;
+    $pointUsed     = 0;
+    $potongan      = 0;
+    $totalPayment  = $totalBelanja;
 
-    // Proses penggunaan poin jika dicentang dan member memiliki poin
-    if ($request->has('point_used') && $member->points > 0) {
-        $pointValue = 1000; // 1 poin = Rp 1000
-        $maxPotongan = $member->points * $pointValue;
+    // Hitung pemakaian poin jika dicentang dan poin tersedia
+    if ($request->filled('point_used') && $member->points > 0) {
+        $pointValue   = 1000;
+        $maxPotongan  = $member->points * $pointValue;
 
-        // Jika poin mencukupi untuk seluruh transaksi
         if ($maxPotongan >= $totalBelanja) {
-            $pointUsed = ceil($totalBelanja / $pointValue);
-            $potongan = $pointUsed * $pointValue;
+            $pointUsed    = ceil($totalBelanja / $pointValue);
+            $potongan     = $pointUsed * $pointValue;
             $totalPayment = 0;
-        }
-        // Jika poin tidak mencukupi untuk seluruh transaksi
-        else {
-            $pointUsed = $member->points;
-            $potongan = $maxPotongan;
+        } else {
+            $pointUsed    = $member->points;
+            $potongan     = $maxPotongan;
             $totalPayment = $totalBelanja - $potongan;
         }
 
-        // Kurangi poin member
-        $member->points -= $pointUsed;
-        $member->save();
+        // Update poin member
+        $member->decrement('points', $pointUsed);
     }
 
-    // Ambil jumlah uang dibayar dari input
-    $totalDibayar = $request->total_payment;
+    $totalDibayar   = $request->total_payment;
+    $uangKembalian  = max(0, $totalDibayar - $totalBelanja);
 
-    // Hitung uang kembalian
-    $uangKembalian = max(0, $totalDibayar - $totalPayment);
-
-    // Buat record penjualan
+    // Simpan penjualan
     $penjualan = Penjualan::create([
         'invoice_number'    => 'INV-' . now()->format('Ymd') . '-' . strtoupper(uniqid()),
         'user_id'           => Auth::id(),
@@ -202,30 +194,26 @@ public function storeStep2(Request $request)
         'tanggal_penjualan' => now()->timezone('Asia/Jakarta'),
     ]);
 
-    // Simpan detail penjualan
-    if (session()->has('selected_products')) {
-        foreach (session('selected_products') as $item) {
-            $produk = Produk::where('title', $item['nama_produk'])->first();
-            if ($produk) {
-                $penjualan->detailPenjualan()->create([
-                    'produk_id' => $produk->id,
-                    'qty'       => $item['qty'],
-                    'price'     => $item['harga_produk'],
-                    'sub_total' => $item['sub_total']
-                ]);
-                $produk->decrement('stock', $item['qty']);
-            }
+    // Simpan detail produk & kurangi stok
+    foreach ($selectedProducts as $item) {
+        $produk = Produk::where('title', $item['nama_produk'])->first();
+        if ($produk) {
+            $penjualan->detailPenjualan()->create([
+                'produk_id' => $produk->id,
+                'qty'       => $item['qty'],
+                'price'     => $item['harga_produk'],
+                'sub_total' => $item['sub_total'],
+            ]);
+            $produk->decrement('stock', $item['qty']);
         }
     }
 
-    // Tambahkan poin baru jika ada pembayaran
+    // Tambahkan poin baru jika pembayaran tunai > 0
     if ($totalPayment > 0) {
-        $poin_baru = floor($totalPayment / 100); // 1 poin per Rp 100
-        $member->points += $poin_baru;
-        $member->save();
+        $poinBaru = floor($totalPayment / 100);
+        $member->increment('points', $poinBaru);
     }
 
-    // Hapus session
     session()->forget(['selected_products', 'total_payment']);
 
     return redirect()->route('petugas.pembelian.struk', $penjualan->id);

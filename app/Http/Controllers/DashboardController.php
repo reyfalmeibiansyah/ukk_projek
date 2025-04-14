@@ -10,42 +10,43 @@ class DashboardController extends Controller
 {
     public function dashboard()
 {
-    $penjualans = Penjualan::with('detailPenjualan.produk')->get();
+    $penjualansHariIni = Penjualan::whereDate('created_at', Carbon::today())
+        ->with('detailPenjualan.produk')->get();
 
-    // Total jumlah produk yang terjual
+    // Total jumlah produk yang terjual HARI INI
     $produkSales = [];
-    foreach ($penjualans as $penjualan) {
+    foreach ($penjualansHariIni as $penjualan) {
         foreach ($penjualan->detailPenjualan as $detail) {
             $produkName = $detail->produk->title;
             $produkSales[$produkName] = ($produkSales[$produkName] ?? 0) + $detail->qty;
         }
     }
 
-    // Persentase penjualan per produk
+    // Persentase penjualan per produk (HARI INI)
     $produkPercentages = [];
-    $totalSales = array_sum($produkSales); // Total jumlah produk yang terjual
+    $totalSales = array_sum($produkSales);
     foreach ($produkSales as $produkName => $sales) {
         $produkPercentages[$produkName] = ($sales / $totalSales) * 100;
     }
 
-    // Jumlah produk terjual per tanggal
+    // Jumlah produk terjual per tanggal (TOTAL, bukan hanya hari ini)
+    $penjualans = Penjualan::with('detailPenjualan')->get();
     $salesByDate = [];
     foreach ($penjualans as $penjualan) {
         foreach ($penjualan->detailPenjualan as $detail) {
             $date = Carbon::parse($penjualan->created_at)->format('d F Y');
-            $salesByDate[$date] = ($salesByDate[$date] ?? 0) + $detail->qty; // Jumlah produk yang terjual per tanggal
+            $salesByDate[$date] = ($salesByDate[$date] ?? 0) + $detail->qty;
         }
     }
 
-    // Siapkan data untuk grafik
     $salesData = [
         'dates' => array_keys($salesByDate),
         'sales' => array_values($salesByDate),
     ];
 
-    // Kirim data ke view
     return view('admin.dashboard', compact('salesData', 'produkPercentages', 'produkSales'));
 }
+
 
 
     public function dashboardpetugas()
