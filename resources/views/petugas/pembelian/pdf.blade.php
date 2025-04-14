@@ -13,10 +13,10 @@
 </head>
 <body>
     <h3>Indo April</h3>
-    <p>Member Status:</p>
-    <p>No. HP:</p>
-    <p>Bergabung Sejak: </p>
-    <p>Poin Member:</p>
+    <p>Member Status: {{ $pembelian->members ? 'Member' : 'Bukan Member' }}</p>
+    <p>No. HP: {{ $pembelian->members->no_hp ?? '-' }}</p>
+    <p>Bergabung Sejak: {{ $pembelian->members->created_at ?? '-' }}</p>
+    <p>Poin Member: {{ $pembelian->members->points ?? '-' }}</p>
 
     <table>
         <thead>
@@ -28,14 +28,14 @@
             </tr>
         </thead>
         <tbody>
-            {{-- @foreach ($penjualan->detailPenjualan as $detail) --}}
+            @foreach ($pembelian->detailPenjualan as $detail)
                 <tr>
-                    <td>nama produk</td>
-                    <td>>qty</td>
-                    <td>Rp.harga</td>
-                    <td>Rp.harga banyak</td>
+                    <td>{{ $detail->produk->nama_produk }}</td>
+                    <td>{{ $detail->qty }}</td>
+                    <td>Rp. {{ number_format($detail->price, 0, ',', '.') }}</td>
+                    <td>Rp. {{ number_format($detail->sub_total, 0, ',', '.') }}</td>
                 </tr>
-            {{-- @endforeach --}}
+            @endforeach
         </tbody>
     </table>
 
@@ -43,23 +43,23 @@
         <tr>
             <td>Poin Digunakan</td>
             <td>:</td>
-            <td>point digunakan</td>
-            <td class="text-end"><strong>Total Harga</strong></td>
-            <td class="text-end">Rp. harga</td>
+            <td>{{ $pembelian->point_used ?? 0 }}</td>
+            <td class="text-end"><strong>Total bayar</strong></td>
+            <td class="text-end">Rp. {{ number_format($pembelian->total_payment, 0, ',', '.') }}</td>
         </tr>
         <tr>
             <td colspan="3"></td>
             <td class="text-end"><strong>Harga Setelah Poin</strong></td>
-            <td class="text-end">Rp.harga</td>
+            <td class="text-end">Rp. {{ number_format($pembelian->total_payment, 0, ',', '.') }}</td>
         </tr>
         <tr>
             <td colspan="3"></td>
             <td class="text-end"><strong>Total Kembalian</strong></td>
-            <td class="text-end">Rp.kembalian</td>
+            <td class="text-end">Rp. {{ number_format($pembelian->change ?? 0, 0, ',', '.') }}</td>
         </tr>
     </table>
 
-    <p class="mt-5">dibuat | oleh</p>
+    <p class="mt-5">{{ $pembelian->created_at }} | {{ $pembelian->user->nama ?? 'Petugas' }}</p>
     <p><strong>Terima kasih atas pembelian Anda!</strong></p>
 </body>
 </html>

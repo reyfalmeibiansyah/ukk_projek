@@ -9,7 +9,7 @@
                     <h4 class="fw-bold mb-0">Form Pembelian</h4>
                 </div>
                 <div class="card-body">
-                    <form action="#" method="POST">
+                    <form action="{{ route('petugas.pembelian.detail') }}" method="POST">
                         @csrf
 
                         {{-- Pilih Produk --}}
@@ -17,17 +17,17 @@
                             <label for="produk_id" class="form-label">Pilih Produk</label>
                             <select name="produk_id" id="produk_id" class="form-select" required>
                                 <option value="">-- Pilih Produk --</option>
-                                {{-- @foreach ($produks as $produk) --}}
+                                @foreach ($produks as $produk)
                                     <option
-                                        value="id"
-                                        data-title="title"
-                                        data-stock="stock"
-                                        data-price="harga"
-                                        data-image="image"
+                                        value="{{ $produk->id }}"
+                                        data-title="{{ $produk->title }}"
+                                        data-stock="{{ $produk->stock }}"
+                                        data-price="{{ $produk->price }}"
+                                        data-image="{{ asset('storage/produks/' . $produk->image) }}"
                                     >
-                                        {{-- {{ $produk->title }} (Stok: {{ $produk->stock }}) --}}
+                                        {{ $produk->title }} (Stok: {{ $produk->stock }})
                                     </option>
-                                {{-- @endforeach --}}
+                                @endforeach
                             </select>
                         </div>
 

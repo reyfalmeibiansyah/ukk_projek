@@ -8,7 +8,7 @@
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb mb-0 d-flex align-items-center">
                         <li class="breadcrumb-item">
-                            <a href="#" class="link">
+                            <a href="{{ route('petugas.dashboard') }}" class="link">
                                 <i class="mdi mdi-home-outline fs-4"></i>
                             </a>
                         </li>
@@ -25,10 +25,10 @@
             <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Data Pembelian</h5>
                 <div class="d-flex gap-2">
-                    <a href="#" class="btn btn-light btn-sm">
+                    <a href="{{ route('petugas.pembelian.create') }}" class="btn btn-light btn-sm">
                         <i class="mdi mdi-plus"></i> Tambah Pembelian
                     </a>
-                    <a href="#" class="btn btn-light btn-sm">
+                    <a href="{{ route('petugas.pembelian.export') }}" class="btn btn-light btn-sm">
                         Export Penjualan (.xlsx)
                     </a>
                 </div>
@@ -47,7 +47,13 @@
                         <span class="ms-2">entri</span>
                     </div>
                     <div>
-                        <input type="text" class="form-control w-auto d-inline-block" placeholder="Cari">
+                        <form method="GET" action="{{ route('petugas.pembelian.index') }}" class="d-flex">
+                            <input type="text" name="search" class="form-control w-auto d-inline-block me-2" placeholder="Cari nama member..." value="{{ request('search') }}">
+                            <button type="submit" class="btn btn-primary btn-sm">Cari</button>
+                            @if(request('search'))
+                                <a href="{{ route('petugas.pembelian.index') }}" class="btn btn-secondary btn-sm ms-2">Reset</a>
+                            @endif
+                        </form>
                     </div>
                 </div>
 
@@ -63,30 +69,31 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {{-- @php $no = 1; @endphp
-                        @forelse($penjualans as $penjualan) --}}
+                        @php $no = ($penjualans->currentPage() - 1) * $penjualans->perPage() + 1; @endphp
+                        @forelse($penjualans as $penjualan)
                             <tr>
-                                <td>no</td>
-                                <td>nama member</td>
-                                <td>tanggal</td>
-                                <td>Rp.harga</td>
-                                <td>oleh</td>
+                                <td>{{ $no++ }}</td>
+                                <td>{{ optional($penjualan->members)->nama_member ?? 'Bukan Member' }}</td>
+                                <td>{{ \Carbon\Carbon::parse($penjualan->created_at)->timezone('Asia/Jakarta')->format('d-m-Y H:i') }}</td>
+                                <td>Rp. {{ number_format($penjualan->total_payment, 0, ',', '.') }}</td>
+                                <td>{{ $penjualan->user->name ?? '-' }}</td>
                                 <td class="text-center">
-                                    <a href="#" class="btn btn-info btn-sm mb-1">
+                                    <a href="{{ route('petugas.pembelian.show', $penjualan->id) }}" class="btn btn-info btn-sm mb-1">
                                         <i class="mdi mdi-eye"></i> Lihat
                                     </a>
-                                    <a href="#" class="btn btn-success btn-sm">
+                                    <a href="{{ route('petugas.pembelian.downloadPdf', $penjualan->id) }}" class="btn btn-success btn-sm">
                                         <i class="mdi mdi-download"></i> Unduh PDF
                                     </a>
                                 </td>
                             </tr>
-                        {{-- @empty --}}
+                        @empty
                             <tr>
                                 <td colspan="6" class="text-center">Tidak ada data pembelian.</td>
                             </tr>
-                        {{-- @endforelse --}}
+                        @endforelse
                     </tbody>
                 </table>
+
             </div>
         </div>
     </div>
