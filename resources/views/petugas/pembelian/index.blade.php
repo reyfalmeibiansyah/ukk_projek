@@ -93,7 +93,6 @@
                         @endforelse
                     </tbody>
                 </table>
-
             </div>
         </div>
     </div>

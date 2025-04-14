@@ -7,6 +7,8 @@ use Illuminate\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Storage;
+use App\Exports\ProdukExport;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Auth; // Tambahkan ini
 
 class ProdukController extends Controller
@@ -54,6 +56,11 @@ class ProdukController extends Controller
 
         return redirect()->route('admin.produks.index')->with(['success' => 'Data Berhasil Disimpan!']);
     }
+
+    public function export()
+{
+    return Excel::download(new ProdukExport, 'produk.xlsx');
+}
 
     public function show(string $id): View
     {

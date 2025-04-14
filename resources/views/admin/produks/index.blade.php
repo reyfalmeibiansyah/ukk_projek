@@ -24,6 +24,7 @@
                         <div class="card border-0 shadow-sm rounded">
                             <div class="card-body">
                                 <a href="{{ route('admin.produks.create') }}" class="btn btn-md btn-primary mb-3">Tambah Produk</a>
+                                <a href="{{ route('admin.produks.export') }}" class="btn btn-md btn-success mb-3">Ekspor ke Excel</a>
                                 <table class="table table-bordered text-center">
                                     <thead class="table-light">
                                         <tr>

@@ -10,27 +10,26 @@ class DashboardController extends Controller
 {
     public function dashboard()
 {
-    $penjualansHariIni = Penjualan::whereDate('created_at', Carbon::today())
-        ->with('detailPenjualan.produk')->get();
+    // Ambil seluruh penjualan (seluruh data, bukan hanya hari ini)
+    $penjualans = Penjualan::with('detailPenjualan.produk')->get();
 
-    // Total jumlah produk yang terjual HARI INI
+    // Total penjualan produk
     $produkSales = [];
-    foreach ($penjualansHariIni as $penjualan) {
+    foreach ($penjualans as $penjualan) {
         foreach ($penjualan->detailPenjualan as $detail) {
             $produkName = $detail->produk->title;
             $produkSales[$produkName] = ($produkSales[$produkName] ?? 0) + $detail->qty;
         }
     }
 
-    // Persentase penjualan per produk (HARI INI)
+    // Persentase penjualan per produk
     $produkPercentages = [];
     $totalSales = array_sum($produkSales);
     foreach ($produkSales as $produkName => $sales) {
         $produkPercentages[$produkName] = ($sales / $totalSales) * 100;
     }
 
-    // Jumlah produk terjual per tanggal (TOTAL, bukan hanya hari ini)
-    $penjualans = Penjualan::with('detailPenjualan')->get();
+    // Data untuk chart total penjualan produk per tanggal (seluruh waktu)
     $salesByDate = [];
     foreach ($penjualans as $penjualan) {
         foreach ($penjualan->detailPenjualan as $detail) {
@@ -46,6 +45,7 @@ class DashboardController extends Controller
 
     return view('admin.dashboard', compact('salesData', 'produkPercentages', 'produkSales'));
 }
+
 
 
 

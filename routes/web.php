@@ -6,6 +6,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PembelianController;
 use App\Http\Controllers\ProdukController;
 use App\Http\Controllers\UserController;
+use App\Models\Produk;
 use Illuminate\Support\Facades\Auth;
 
 // 🔓 Route Login (tanpa middleware login)
@@ -32,6 +33,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::put('/produks/{id}', [ProdukController::class, 'update'])->name('produks.update');
     Route::post('/produk/updateStock/{id}', [ProdukController::class, 'updateStock'])->name('produk.updateStock');
     Route::delete('/produks/{id}', [ProdukController::class, 'destroy'])->name('produks.destroy');
+    Route::get('/produks/export', [ProdukController::class, 'export'])->name('produks.export');
 
     // CRUD User
     Route::prefix('user')->name('user.')->group(function () {

@@ -26,7 +26,7 @@ class PembelianController extends Controller
         })
         ->latest()
         ->paginate(10)
-        ->appends(['search' => $keyword]); // biar tetap nyimpen keyword saat pagination
+        ->appends(['search' => $keyword]);
 
     return view('petugas.pembelian.index', compact('penjualans'));
 }
