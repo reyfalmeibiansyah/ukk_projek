@@ -1,131 +1,113 @@
 @extends('layout.sidebar')
 @section('content')
 
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card shadow-sm border-0 rounded-4">
-                <div class="card-header bg-white border-0 text-center">
-                    <h4 class="fw-bold mb-0">Form Pembelian</h4>
+<div class="container mt-5 mb-5 pb-5" style="margin-left: 240px;"> {{-- offset dari sidebar --}}
+    <h4 class="fw-bold text-center mb-4">Form Pembelian</h4>
+
+    <form action="{{ route('petugas.pembelian.detail') }}" method="POST">
+        @csrf
+
+        {{-- Daftar Produk --}}
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-4">
+            @foreach ($produks as $produk)
+            <div class="col">
+                <div class="card h-100 p-2">
+                    <label style="cursor: pointer;">
+                        <input type="checkbox" name="produk[{{ $produk->id }}][pilih]" value="{{$produk->id}}" class="form-check-input me-2 produk-checkbox"
+                               data-id="{{ $produk->id }}"
+                               data-price="{{ $produk->price }}">
+                        <img src="{{ asset('storage/produks/' . $produk->image) }}" class="card-img-top" alt="{{ $produk->title }}" style="height: 150px; object-fit: cover;">
+                    </label>
+                    <div class="card-body text-center">
+                        <h5 class="card-title">{{ $produk->title }}</h5>
+                        <p class="card-text mb-1">Stok: {{ $produk->stock }}</p>
+                        <p class="card-text">Harga: Rp. {{ number_format($produk->price, 0, ',', '.') }}</p>
+                        <div class="input-group mt-2 justify-content-center">
+                            <button type="button" class="btn btn-outline-secondary btn-kurang" data-id="{{ $produk->id }}">−</button>
+                            <input type="number" name="produk[{{ $produk->id }}][jumlah]" id="jumlah-{{ $produk->id }}" class="form-control text-center mx-1 jumlah-input" value="1" min="1" style="max-width: 60px;" disabled>
+                            <button type="button" class="btn btn-outline-secondary btn-tambah" data-id="{{ $produk->id }}">+</button>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <form action="{{ route('petugas.pembelian.detail') }}" method="POST">
-                        @csrf
+            </div>
+            @endforeach
+        </div>
 
-                        {{-- Pilih Produk --}}
-                        <div class="mb-3">
-                            <label for="produk_id" class="form-label">Pilih Produk</label>
-                            <select name="produk_id" id="produk_id" class="form-select" required>
-                                <option value="">-- Pilih Produk --</option>
-                                @foreach ($produks as $produk)
-                                    <option
-                                        value="{{ $produk->id }}"
-                                        data-title="{{ $produk->title }}"
-                                        data-stock="{{ $produk->stock }}"
-                                        data-price="{{ $produk->price }}"
-                                        data-image="{{ asset('storage/produks/' . $produk->image) }}"
-                                    >
-                                        {{ $produk->title }} (Stok: {{ $produk->stock }})
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        {{-- Preview Produk --}}
-                        <div id="produk-preview" class="text-center mb-4 d-none">
-                            <img id="preview-image" src="" alt="Gambar Produk" class="img-fluid mb-2 rounded" style="max-height: 150px;">
-                            <h5 id="preview-title" class="mb-1 fw-bold"></h5>
-                            <p class="mb-0">Stok: <span id="preview-stock"></span></p>
-                            <p class="mb-2">Harga: Rp. <span id="preview-price"></span></p>
-                        </div>
-
-                        {{-- Jumlah dan Tombol --}}
-                        <div class="mb-3">
-                            <label for="jumlah" class="form-label">Jumlah</label>
-                            <div class="input-group">
-                                <button type="button" class="btn btn-outline-secondary" id="btn-kurang">−</button>
-                                <input type="number" name="jumlah" id="jumlah" class="form-control text-center" value="1" min="1" required>
-                                <button type="button" class="btn btn-outline-secondary" id="btn-tambah">+</button>
-                            </div>
-                        </div>
-
-                        {{-- Subtotal --}}
-                        <div class="mb-4 text-end">
-                            <strong>Sub Total: Rp. <span id="subtotal">0</span></strong>
-                        </div>
-
+        {{-- Footer Subtotal dan Submit --}}
+        <div class="fixed-bottom bg-white p-3 border-top shadow">
+            <div class="container">
+                <div class="row align-items-center">
+                    <div class="col-md-6 text-start mb-2 mb-md-0">
+                        <strong>Sub Total: Rp. <span id="subtotal">0</span></strong>
+                    </div>
+                    <div class="col-md-6 text-end">
                         <button type="submit" class="btn btn-primary w-100 rounded-pill">Beli Sekarang</button>
-                    </form>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+        <input type="hidden" name="total_payment" id="total_payment_input" value="0">
+
+    </form>
 </div>
 
 {{-- JavaScript --}}
 <script>
-    const produkSelect = document.getElementById('produk_id');
-    const preview = document.getElementById('produk-preview');
-    const previewImage = document.getElementById('preview-image');
-    const previewTitle = document.getElementById('preview-title');
-    const previewStock = document.getElementById('preview-stock');
-    const previewPrice = document.getElementById('preview-price');
-    const jumlahInput = document.getElementById('jumlah');
-    const subtotalDisplay = document.getElementById('subtotal');
-
-    let currentStock = 0;
-    let currentPrice = 0;
-
-    produkSelect.addEventListener('change', function () {
-        const selected = this.options[this.selectedIndex];
-        if (!selected.value) {
-            preview.classList.add('d-none');
-            return;
-        }
-
-        currentStock = parseInt(selected.dataset.stock);
-        currentPrice = parseInt(selected.dataset.price);
-
-        previewImage.src = selected.dataset.image;
-        previewTitle.textContent = selected.dataset.title;
-        previewStock.textContent = currentStock;
-        previewPrice.textContent = currentPrice.toLocaleString();
-
-        jumlahInput.value = 1;
-        preview.classList.remove('d-none');
-        updateSubtotal();
-    });
-
-    document.getElementById('btn-tambah').addEventListener('click', () => {
-        let jumlah = parseInt(jumlahInput.value || 1);
-        if (jumlah < currentStock) {
-            jumlahInput.value = jumlah + 1;
-            updateSubtotal();
-        }
-    });
-
-    document.getElementById('btn-kurang').addEventListener('click', () => {
-        let jumlah = parseInt(jumlahInput.value || 1);
-        if (jumlah > 1) {
-            jumlahInput.value = jumlah - 1;
-            updateSubtotal();
-        }
-    });
-
-    jumlahInput.addEventListener('input', () => {
-        let jumlah = parseInt(jumlahInput.value);
-        if (jumlah > currentStock) {
-            jumlahInput.value = currentStock;
-        } else if (jumlah < 1 || isNaN(jumlah)) {
-            jumlahInput.value = 1;
-        }
-        updateSubtotal();
-    });
-
     function updateSubtotal() {
-        const jumlah = parseInt(jumlahInput.value) || 0;
-        subtotalDisplay.textContent = (jumlah * currentPrice).toLocaleString();
+        let subtotal = 0;
+        document.querySelectorAll('.produk-checkbox').forEach(cb => {
+            const id = cb.dataset.id;
+            const price = parseInt(cb.dataset.price);
+            const jumlahInput = document.getElementById('jumlah-' + id);
+            const jumlah = parseInt(jumlahInput.value || 0);
+
+            if (cb.checked) {
+                subtotal += price * jumlah;
+            }
+        });
+        document.getElementById('subtotal').innerText = subtotal.toLocaleString();
     }
+
+    // Toggle checkbox aktifkan jumlah
+    document.querySelectorAll('.produk-checkbox').forEach(cb => {
+        cb.addEventListener('change', () => {
+            const id = cb.dataset.id;
+            const jumlahInput = document.getElementById('jumlah-' + id);
+            jumlahInput.disabled = !cb.checked;
+            updateSubtotal();
+        });
+    });
+
+    // Tombol tambah
+    document.querySelectorAll('.btn-tambah').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = btn.dataset.id;
+            const input = document.getElementById('jumlah-' + id);
+            let val = parseInt(input.value || 1);
+            input.value = val + 1;
+            updateSubtotal();
+        });
+    });
+
+    // Tombol kurang
+    document.querySelectorAll('.btn-kurang').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = btn.dataset.id;
+            const input = document.getElementById('jumlah-' + id);
+            let val = parseInt(input.value || 1);
+            if (val > 1) {
+                input.value = val - 1;
+                updateSubtotal();
+            }
+        });
+    });
+
+    // Update saat input jumlah diketik manual
+    document.querySelectorAll('.jumlah-input').forEach(input => {
+        input.addEventListener('input', () => {
+            updateSubtotal();
+        });
+    });
 </script>
 
 @endsection
