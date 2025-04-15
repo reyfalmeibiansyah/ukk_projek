@@ -30,7 +30,7 @@
         <tbody>
             @foreach ($pembelian->detailPenjualan as $detail)
                 <tr>
-                    <td>{{ $detail->produk->nama_produk }}</td>
+                    <td>{{ $detail->produk->title }}</td>
                     <td>{{ $detail->qty }}</td>
                     <td>Rp. {{ number_format($detail->price, 0, ',', '.') }}</td>
                     <td>Rp. {{ number_format($detail->sub_total, 0, ',', '.') }}</td>
