@@ -126,7 +126,7 @@ class PembelianController extends Controller
                 'price'     => $produkDetail->price,
                 'sub_total' => $produkDetail->price * $item['jumlah']
             ]);
-            $produkDetail->decrement('stock', $request->jumlah);
+            $produkDetail->decrement('stock', $item['jumlah']);
         }
 
         // Update stok
@@ -142,11 +142,9 @@ class PembelianController extends Controller
             'total_payment' => 'required|numeric',
             'point_used'    => 'nullable|in:1',
         ]);
-
-
-        // Cari atau buat member baru
+    
+        // Cari atau buat member
         $member = Member::where('nama_member', $request->nama_member)->first();
-
         if (!$member) {
             $member = Member::create([
                 'nama_member'    => $request->nama_member,
@@ -154,48 +152,48 @@ class PembelianController extends Controller
                 'points'         => 0,
             ]);
         }
-
-        // Hitung total belanja dari session
-        $totalBelanja = 0;
-        if (session()->has('selected_products')) {
-            foreach (session('selected_products') as $item) {
-                $totalBelanja += $item['sub_total'];
+    
+        $selectedProducts = session('selected_products', []);
+        if (empty($selectedProducts)) {
+            return back()->with('error', 'Tidak ada produk yang dipilih.');
+        }
+    
+        // Validasi stok
+        foreach ($selectedProducts as $item) {
+            $produk = Produk::where('title', $item['nama_produk'])->first();
+            if (!$produk || $produk->stock < $item['qty']) {
+                return back()->with('error', "Stok tidak mencukupi untuk produk: {$item['nama_produk']}. Stok tersedia: {$produk->stock}");
             }
         }
-
+    
+        // Hitung total belanja
+        $totalBelanja = array_sum(array_column($selectedProducts, 'sub_total'));
+    
+        // Proses poin
         $pointUsed = 0;
         $potongan = 0;
         $totalPayment = $totalBelanja;
-
-        // Proses penggunaan poin jika dicentang dan member memiliki poin
+    
         if ($request->has('point_used') && $member->points > 0) {
-            $pointValue = 1000; // 1 poin = Rp 1000
-            $maxPotongan = $member->points * $pointValue;
-
-            // Jika poin mencukupi untuk seluruh transaksi
-            if ($maxPotongan >= $totalBelanja) {
+            $pointValue = 1000;
+    
+            if ($member->points * $pointValue >= $totalBelanja) {
                 $pointUsed = ceil($totalBelanja / $pointValue);
                 $potongan = $pointUsed * $pointValue;
                 $totalPayment = 0;
-            }
-            // Jika poin tidak mencukupi untuk seluruh transaksi
-            else {
+            } else {
                 $pointUsed = $member->points;
-                $potongan = $maxPotongan;
+                $potongan = $pointUsed * $pointValue;
                 $totalPayment = $totalBelanja - $potongan;
             }
-
-            // Kurangi poin member
+    
             $member->points -= $pointUsed;
             $member->save();
         }
-
-        // Ambil jumlah uang dibayar dari input
+    
         $totalDibayar = $request->total_payment;
-
-        // Hitung uang kembalian
         $uangKembalian = max(0, $totalDibayar - $totalPayment);
-
+    
         // Buat record penjualan
         $penjualan = Penjualan::create([
             'invoice_number'    => 'INV-' . now()->format('Ymd') . '-' . strtoupper(uniqid()),
@@ -208,35 +206,36 @@ class PembelianController extends Controller
             'change'            => $uangKembalian,
             'tanggal_penjualan' => now()->timezone('Asia/Jakarta'),
         ]);
-
-        // Simpan detail penjualan
-        if (session()->has('selected_products')) {
-            foreach (session('selected_products') as $item) {
-                $produk = Produk::where('title', $item['nama_produk'])->first();
-                if ($produk) {
-                    $penjualan->detailPenjualan()->create([
-                        'produk_id' => $produk->id,
-                        'qty'       => $item['qty'],
-                        'price'     => $item['harga_produk'],
-                        'sub_total' => $item['sub_total']
-                    ]);
-                    $produk->decrement('stock', $item['qty']);
-                }
+    
+        // Simpan detail penjualan dan kurangi stok
+        foreach ($selectedProducts as $item) {
+            $produk = Produk::where('title', $item['nama_produk'])->first();
+            if (!$produk || $produk->price === null) {
+                return back()->with('error', 'Produk atau harga tidak valid.');
             }
+    
+            $penjualan->detailPenjualan()->create([
+                'produk_id' => $produk->id,
+                'qty'       => $item['qty'],
+                'price'     => $produk->price,
+                'sub_total' => $produk->price * $item['qty'],
+            ]);
+    
+            $produk->decrement('stock', $item['qty']);
         }
-
-        // Tambahkan poin baru jika ada pembayaran
+    
+        // Tambah poin baru dari pembelanjaan (jika ada potongan)
         if ($totalPayment > 0) {
-            $poin_baru = floor($totalPayment / 100); // 1 poin per Rp 100
-            $member->points += $poin_baru;
+            $poinBaru = floor($totalPayment / 100); // misalnya 1 poin per 100 rupiah
+            $member->points += $poinBaru;
             $member->save();
         }
-
-        // Hapus session
+    
         session()->forget(['selected_products', 'total_payment']);
-
+    
         return redirect()->route('petugas.pembelian.struk', $penjualan->id);
     }
+    
 
 
 
@@ -346,7 +345,7 @@ class PembelianController extends Controller
                             'nama_produk'  => $produkGet->title,
                             'qty'          => $item['jumlah'],
                             'harga_produk' => $produkGet->harga,
-                            'sub_total'    => $request->harga * $item['jumlah']
+                            'sub_total'    => $produkGet->price *$item['jumlah']
                         ]
                     ],
                     'total_payment' => $request->total_payment

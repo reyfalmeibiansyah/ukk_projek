@@ -12,30 +12,19 @@
                      style="background-color: #f8f9fa; border: 1px solid #ddd; border-radius: 10px;">
                     <div>
                         <h5 class="fw-bold mb-3">Ringkasan Produk</h5>
-                        <table class="table table-bordered mb-3">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Nama Produk</th>
-                                    <th>QTY</th>
-                                    <th>Harga</th>
-                                    <th>Sub Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach ($selectedProducts as $product)
-                                    <tr>
-                                        <td>{{ $product['nama_produk'] }}</td>
-                                        <td class="text-center">{{ $product['qty'] }}</td>
-                                        <td class="text-end">Rp {{ number_format($product['harga_produk'], 0, ',', '.') }}</td>
-                                        <td class="text-end">Rp {{ number_format($product['sub_total'], 0, ',', '.') }}</td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
+                        @foreach ($selectedProducts as $product)
+                            <div class="d-flex justify-content-between border-bottom py-2">
+                                <div>
+                                    <p class="mb-0 fw-semibold">{{ $product['nama_produk'] }}</p>
+                                    <small class="text-muted">Rp. {{ number_format($product['harga_produk']) }} x {{ $product['qty'] }}</small>
+                                </div>
+                                <p class="fw-semibold mb-0">Rp. {{ number_format($product['sub_total']) }}</p>
+                            </div>
+                        @endforeach
 
-                        <div class="text-end">
-                            <p class="mb-1"><strong>Total Harga:</strong> Rp {{ number_format($total_payment, 0, ',', '.') }}</p>
-                            <p class="mb-0"><strong>Total Bayar:</strong> Rp <span id="total_bayar_display">{{ number_format($total_payment, 0, ',', '.') }}</span></p>
+                        <div class="d-flex justify-content-between mt-3">
+                            <h6 class="fw-semibold">Total</h6>
+                            <h5 class="fw-bold">Rp. {{ number_format($total_payment) }}</h5>
                         </div>
                     </div>
                 </div>
@@ -99,7 +88,6 @@ document.addEventListener("DOMContentLoaded", function () {
         let potongan = poinMember;
         let totalSetelahPotongan = totalPayment - potongan;
 
-        // Jika potongan melebihi total pembayaran
         if (totalSetelahPotongan < 0) {
             potongan = totalPayment;
             totalSetelahPotongan = 0;

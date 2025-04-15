@@ -57,7 +57,7 @@
                 <table class="table table-bordered table-striped align-middle">
                     <thead class="table-primary">
                         <tr>
-                            <th>#</th>
+                            <th>No</th>
                             <th>Nama Pelanggan</th>
                             <th>Tanggal Pembelian</th>
                             <th>Total Harga</th>
@@ -91,7 +91,7 @@
                     </tbody>
                 </table>
                 {{-- Pagination --}}
-                <<div class="mt-4 d-flex justify-content-between align-items-center flex-wrap">
+                <div class="mt-4 d-flex justify-content-between align-items-center flex-wrap">
                     <div class="text-muted small">
                         Menampilkan {{ $penjualans->firstItem() }} sampai {{ $penjualans->lastItem() }} dari total {{ $penjualans->total() }} entri
                     </div>
