@@ -154,10 +154,12 @@ class PembelianController extends Controller
         }
     
         $selectedProducts = session('selected_products', []);
+
+        
         if (empty($selectedProducts)) {
             return back()->with('error', 'Tidak ada produk yang dipilih.');
         }
-    
+        
         // Validasi stok
         foreach ($selectedProducts as $item) {
             $produk = Produk::where('title', $item['nama_produk'])->first();
@@ -165,18 +167,18 @@ class PembelianController extends Controller
                 return back()->with('error', "Stok tidak mencukupi untuk produk: {$item['nama_produk']}. Stok tersedia: {$produk->stock}");
             }
         }
-    
+        
         // Hitung total belanja
         $totalBelanja = array_sum(array_column($selectedProducts, 'sub_total'));
-    
+        
         // Proses poin
         $pointUsed = 0;
         $potongan = 0;
         $totalPayment = $totalBelanja;
-    
+        
         if ($request->has('point_used') && $member->points > 0) {
             $pointValue = 1000;
-    
+            
             if ($member->points * $pointValue >= $totalBelanja) {
                 $pointUsed = ceil($totalBelanja / $pointValue);
                 $potongan = $pointUsed * $pointValue;
@@ -186,14 +188,14 @@ class PembelianController extends Controller
                 $potongan = $pointUsed * $pointValue;
                 $totalPayment = $totalBelanja - $potongan;
             }
-    
+            
             $member->points -= $pointUsed;
             $member->save();
         }
-    
+        
         $totalDibayar = $request->total_payment;
         $uangKembalian = max(0, $totalDibayar - $totalPayment);
-    
+        
         // Buat record penjualan
         $penjualan = Penjualan::create([
             'invoice_number'    => 'INV-' . now()->format('Ymd') . '-' . strtoupper(uniqid()),
@@ -206,7 +208,7 @@ class PembelianController extends Controller
             'change'            => $uangKembalian,
             'tanggal_penjualan' => now()->timezone('Asia/Jakarta'),
         ]);
-    
+        
         // Simpan detail penjualan dan kurangi stok
         foreach ($selectedProducts as $item) {
             $produk = Produk::where('title', $item['nama_produk'])->first();
@@ -223,6 +225,7 @@ class PembelianController extends Controller
     
             $produk->decrement('stock', $item['qty']);
         }
+
     
         // Tambah poin baru dari pembelanjaan (jika ada potongan)
         if ($totalPayment > 0) {
@@ -335,24 +338,42 @@ class PembelianController extends Controller
             return back()->with('error', 'Stok produk tidak mencukupi.');
         }
 
+        $produkAll = [];
         foreach ($request->produk as $item) {
             $produkGet = Produk::findOrFail($item['id']);
-            session(
-                [
-                    # code...
-                    'selected_products' => [
-                        [
-                            'nama_produk'  => $produkGet->title,
-                            'qty'          => $item['jumlah'],
-                            'harga_produk' => $produkGet->harga,
-                            'sub_total'    => $produkGet->price *$item['jumlah']
-                        ]
-                    ],
-                    'total_payment' => $request->total_payment
-                ]
-            );
+            $produkItem = [
+                'nama_produk'  => $produkGet->title,
+                'qty'          => $item['jumlah'],
+                'harga_produk' => $produkGet->price,
+                'sub_total'    => $produkGet->price * $item['jumlah']
+            ];
+            array_push($produkAll,$produkItem);
         }
-
+        session(
+            [
+                # code...
+                'selected_products' => 
+                $produkAll
+                ,
+                'total_payment' => $request->total_payment
+            ]
+        );   
+        // session(
+        //     [
+        //         # code...
+        //         'selected_products' => [
+                    
+        //             $produkAll = [
+        //                 'nama_produk'  => $produkGet->title,
+        //                 'qty'          => $item['jumlah'],
+        //                 'harga_produk' => $produkGet->price,
+        //                 'sub_total'    => $produkGet->price * $item['jumlah']
+        //             ]
+        //             array_push();
+        //         ],
+        //         'total_payment' => $request->total_payment
+        //     ]
+        // );   
         // Ambil data member dari input nomor telepon
         $customerPhone = $request->input('customer_phone');
         $member = Member::where('nomor_telepon', $customerPhone)->first();
